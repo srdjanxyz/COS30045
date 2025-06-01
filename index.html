@@ -13,77 +13,83 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            justify-content: centre;
+            align-items: centre;
             min-height: 100vh;
             margin: 0;
-            background-color: #f4f7f6;
-            color: #333;
+            background-colour: #f4f7f6;
+            colour: #333;
             padding: 20px;
         }
 
         h1 {
             margin-bottom: 2rem;
-            color: #555;
-            text-align: center;
+            colour: #555;
+            text-align: centre;
         }
 
         .controls {
             margin-bottom: 2rem;
             display: flex;
+            flex-wrap: wrap;
+            justify-content: centre;
+            align-items: centre;
+            gap: 1.5rem;
+            max-width: 1200px;
+        }
+
+        .control-group {
+            display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 1rem;
+            align-items: centre;
+            gap: 0.5rem;
         }
 
         label {
             font-weight: bold;
-            color: #555;
+            colour: #555;
+            font-size: 0.9rem;
         }
 
         select {
             padding: 8px 12px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             border: 2px solid #ddd;
             border-radius: 4px;
-            background-color: white;
-            color: #333;
-            min-width: 300px;
+            background-colour: white;
+            colour: #333;
+            min-width: 180px;
         }
 
         select:focus {
             outline: none;
-            border-color: #1f78b4;
+            border-colour: #1f78b4;
         }
 
         #chart-container {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: centre;
+            width: 100%;
+            max-width: 1200px;
         }
 
         svg {
-            background-color: #fff;
+            background-colour: #fff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
             margin-bottom: 1rem;
         }
 
-        .line {
-            fill: none;
-            stroke-width: 2.5;
+        .bar-segment {
             opacity: 0.8;
+            stroke: #fff;
+            stroke-width: 1;
         }
 
-        .line:hover {
+        .bar-segment:hover {
             opacity: 1;
-            stroke-width: 3;
-        }
-
-        .country-label {
-            font-size: 0.9rem;
-            font-weight: bold;
-            fill: #333;
+            stroke-width: 2;
         }
 
         .axis {
@@ -98,14 +104,15 @@
 
         .tooltip {
             position: absolute;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
+            background-colour: rgba(0, 0, 0, 0.8);
+            colour: white;
             padding: 8px 12px;
             border-radius: 4px;
             pointer-events: none;
             font-size: 0.9rem;
             opacity: 0;
             transition: opacity 0.3s;
+            z-index: 1000;
         }
 
         .chart-title {
@@ -117,7 +124,41 @@
 
         .loading {
             font-size: 1.2rem;
-            color: #666;
+            colour: #666;
+            text-align: centre;
+            padding: 2rem;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: centre;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: centre;
+            gap: 5px;
+        }
+
+        .legend-colour {
+            width: 15px;
+            height: 15px;
+            border-radius: 2px;
+        }
+
+        .legend-text {
+            font-size: 0.9rem;
+            colour: #333;
+        }
+
+        .no-data {
+            font-size: 1.1rem;
+            colour: #666;
+            text-align: centre;
+            padding: 2rem;
         }
     </style>
 </head>
@@ -126,211 +167,360 @@
     <h1>COS30045 Data Visualisation<br>Assignment 3C: Website and visualisation</h1>
 
     <div class="controls">
-        <label for="measure-select">Choose a measure:</label>
-        <select id="measure-select">
-            <option value="">Loading data...</option>
-        </select>
+        <div class="control-group">
+            <label for="measure-select">Measure:</label>
+            <select id="measure-select">
+                <option value="">All Measures</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="country-select">Country:</label>
+            <select id="country-select">
+                <option value="">All Countries</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="age-select">Age:</label>
+            <select id="age-select">
+                <option value="">All Ages</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="sex-select">Sex:</label>
+            <select id="sex-select">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="year-select">Year Range:</label>
+            <select id="year-select">
+                <option value="">Loading data...</option>
+            </select>
+        </div>
     </div>
 
     <div id="chart-container">
         <div class="loading">Loading data...</div>
     </div>
+
+    <div id="legend" class="legend"></div>
     <div class="tooltip" id="tooltip"></div>
 
     <script>
         const width = 1000;
-        const height = 600;
-        const margin = { top: 80, right: 150, bottom: 80, left: 80 };
+        const height = 700;
+        const margin = { top: 80, right: 150, bottom: 80, left: 200 };
 
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
 
-        function loadData() {
-            try {
-                const csvContent = `STRUCTURE,STRUCTURE_ID,STRUCTURE_NAME,ACTION,REF_AREA,Reference area,FREQ,Frequency of observation,MEASURE,Measure,AGE,Age,SEX,Sex,UNIT_MEASURE,Unit of measure,METHODOLOGY,Measurement method,TIME_PERIOD,Time period,OBS_VALUE,Observation value,OBS_STATUS,Observation status,UNIT_MULT,Unit multiplier,DECIMALS,Decimals
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1961,,110.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1962,,109.1,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1963,,110.7,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1964,,114.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1965,,113,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1966,,114.5,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1967,,116.1,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1968,,117.6,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1969,,118,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,USA,United States,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1970,,119.7,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1961,,95.3,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1962,,97.1,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1963,,99.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1964,,101.8,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1965,,103.4,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1966,,105.7,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1967,,107.3,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1968,,109.1,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1969,,110.5,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,AUS,Australia,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1970,,112.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1961,,132.8,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1962,,133.1,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1963,,134.7,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1964,,137.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1965,,139.4,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1966,,141.8,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1967,,143.5,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1968,,145.2,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1969,,146.8,,A,Normal value,0,Units,,
-DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health,I,GBR,United Kingdom,A,Annual,FTS,Fat supply,_T,Total,_T,Total,G_PS_D,Grammes per person per day,_Z,Not applicable,1970,,148.1,,A,Normal value,0,Units,,`;
+        let globalData = [];
 
-                const data = d3.csvParse(csvContent);
+        async function loadData() {
+            try {
+                const data = await d3.csv("Top15GDP.csv");
 
                 data.forEach(d => {
                     d.OBS_VALUE = +d.OBS_VALUE;
                     d.TIME_PERIOD = +d.TIME_PERIOD;
                 });
 
-                const validData = data.filter(d => !isNaN(d.OBS_VALUE) && !isNaN(d.TIME_PERIOD));
+                globalData = data.filter(d => !isNaN(d.OBS_VALUE) && !isNaN(d.TIME_PERIOD));
 
-                const measures = Array.from(new Set(validData.map(d => d.Measure))).sort();
-                const select = d3.select("#measure-select");
-
-                select.selectAll("option").remove();
-                select.selectAll("option")
-                    .data(measures)
-                    .enter()
-                    .append("option")
-                    .attr("value", d => d)
-                    .text(d => d);
-
+                populateFilters(globalData);
                 d3.select("#chart-container .loading").remove();
-
                 createChart();
-
-                function createChart() {
-                    const svg = d3.select("#chart-container")
-                        .append("svg")
-                        .attr("width", width)
-                        .attr("height", height);
-
-                    const chart = svg.append("g")
-                        .attr("transform", `translate(${margin.left},${margin.top})`);
-
-                    const tooltip = d3.select("#tooltip");
-
-                    function updateChart(selectedMeasure) {
-                        const filtered = validData.filter(d => d.Measure === selectedMeasure);
-
-                        if (filtered.length === 0) {
-                            chart.selectAll("*").remove();
-                            chart.append("text")
-                                .attr("x", chartWidth / 2)
-                                .attr("y", chartHeight / 2)
-                                .style("text-anchor", "middle")
-                                .style("font-size", "1.2rem")
-                                .style("fill", "#666")
-                                .text("No data available for this measure");
-                            return;
-                        }
-
-                        const nested = d3.group(filtered, d => d["Reference area"]);
-                        const countries = Array.from(nested.keys());
-
-                        const x = d3.scaleLinear()
-                            .domain(d3.extent(filtered, d => d.TIME_PERIOD))
-                            .range([0, chartWidth]);
-
-                        const y = d3.scaleLinear()
-                            .domain(d3.extent(filtered, d => d.OBS_VALUE))
-                            .nice()
-                            .range([chartHeight, 0]);
-
-                        const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-
-                        chart.selectAll("*").remove();
-
-                        chart.append("text")
-                            .attr("class", "chart-title")
-                            .attr("x", chartWidth / 2)
-                            .attr("y", -20)
-                            .text(selectedMeasure);
-
-                        chart.append("g")
-                            .attr("class", "axis")
-                            .attr("transform", `translate(0,${chartHeight})`)
-                            .call(d3.axisBottom(x).tickFormat(d3.format("d")));
-
-                        chart.append("text")
-                            .attr("class", "axis-label")
-                            .attr("x", chartWidth / 2)
-                            .attr("y", chartHeight + 50)
-                            .style("text-anchor", "middle")
-                            .text("Year");
-
-                        chart.append("g")
-                            .attr("class", "axis")
-                            .call(d3.axisLeft(y));
-
-                        const unitMeasure = filtered[0]["Unit of measure"];
-                        chart.append("text")
-                            .attr("class", "axis-label")
-                            .attr("transform", "rotate(-90)")
-                            .attr("x", -chartHeight / 2)
-                            .attr("y", -50)
-                            .style("text-anchor", "middle")
-                            .text(unitMeasure);
-
-                        const line = d3.line()
-                            .x(d => x(d.TIME_PERIOD))
-                            .y(d => y(d.OBS_VALUE))
-                            .curve(d3.curveMonotoneX);
-
-                        nested.forEach((values, country) => {
-                            const sortedValues = values.sort((a, b) => a.TIME_PERIOD - b.TIME_PERIOD);
-
-                            chart.append("path")
-                                .datum(sortedValues)
-                                .attr("class", "line")
-                                .attr("stroke", colorScale(country))
-                                .attr("d", line);
-
-                            chart.selectAll(`.point-${country.replace(/\s+/g, '-')}`)
-                                .data(sortedValues)
-                                .enter()
-                                .append("circle")
-                                .attr("class", `point-${country.replace(/\s+/g, '-')}`)
-                                .attr("cx", d => x(d.TIME_PERIOD))
-                                .attr("cy", d => y(d.OBS_VALUE))
-                                .attr("r", 4)
-                                .attr("fill", colorScale(country))
-                                .on("mouseover", function (event, d) {
-                                    tooltip.style("opacity", 1)
-                                        .html(`<strong>${country}</strong><br/>Year: ${d.TIME_PERIOD}<br/>Value: ${d.OBS_VALUE.toFixed(1)} ${unitMeasure}`)
-                                        .style("left", (event.pageX + 10) + "px")
-                                        .style("top", (event.pageY - 10) + "px");
-                                })
-                                .on("mouseout", function () {
-                                    tooltip.style("opacity", 0);
-                                });
-
-                            const lastPoint = sortedValues[sortedValues.length - 1];
-                            chart.append("text")
-                                .attr("class", "country-label")
-                                .attr("x", x(lastPoint.TIME_PERIOD) + 8)
-                                .attr("y", y(lastPoint.OBS_VALUE) + 4)
-                                .text(country)
-                                .style("fill", colorScale(country));
-                        });
-                    }
-
-                    select.on("change", function () {
-                        updateChart(this.value);
-                    });
-
-                    if (measures.length > 0) {
-                        updateChart(measures[0]);
-                    }
-                }
 
             } catch (error) {
                 console.error("Error loading data:", error);
-                d3.select("#chart-container").html('<div class="loading">Error loading data</div>');
+                d3.select("#chart-container").html('<div class="loading">Error loading data. Please ensure Top15GDP.csv is in the same directory.</div>');
+            }
+        }
+
+        function populateFilters(data) {
+            const measures = Array.from(new Set(data.map(d => d.Measure || d.MEASURE || d.measure).filter(d => d))).sort();
+            const countries = Array.from(new Set(data.map(d => d["Reference area"]))).sort();
+            const ages = Array.from(new Set(data.map(d => d.Age))).sort();
+            const sexes = Array.from(new Set(data.map(d => d.Sex))).sort();
+            const years = Array.from(new Set(data.map(d => d.TIME_PERIOD))).sort();
+
+            const yearRanges = [];
+            for (let i = 0; i < years.length; i += 5) {
+                const startYear = years[i];
+                const endYear = years[Math.min(i + 4, years.length - 1)];
+                yearRanges.push({
+                    label: `${startYear}-${endYear}`,
+                    start: startYear,
+                    end: endYear
+                });
+            }
+
+            populateSelect("#measure-select", measures, "All Measures");
+            populateSelect("#country-select", countries, "All Countries");
+            populateSelect("#age-select", ages, "All Ages");
+            populateSelect("#sex-select", sexes, "All");
+
+            const yearSelect = d3.select("#year-select");
+            yearSelect.selectAll("option").remove();
+            yearSelect.selectAll("option")
+                .data(yearRanges)
+                .enter()
+                .append("option")
+                .attr("value", d => `${d.start}-${d.end}`)
+                .text(d => d.label);
+        }
+
+        function populateSelect(selector, options, defaultText) {
+            const select = d3.select(selector);
+            const currentOptions = select.selectAll("option:not(:first-child)");
+            currentOptions.remove();
+
+            select.selectAll("option:not(:first-child)")
+                .data(options)
+                .enter()
+                .append("option")
+                .attr("value", d => d)
+                .text(d => d);
+        }
+
+        function createChart() {
+            const svg = d3.select("#chart-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const chart = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const tooltip = d3.select("#tooltip");
+            const legend = d3.select("#legend");
+
+            function getFilteredData() {
+                const selectedMeasure = d3.select("#measure-select").property("value");
+                const selectedCountry = d3.select("#country-select").property("value");
+                const selectedAge = d3.select("#age-select").property("value");
+                const selectedSex = d3.select("#sex-select").property("value");
+                const selectedYearRange = d3.select("#year-select").property("value");
+
+                let filtered = globalData;
+
+                if (selectedMeasure) {
+                    filtered = filtered.filter(d =>
+                        (d.Measure && d.Measure === selectedMeasure) ||
+                        (d.MEASURE && d.MEASURE === selectedMeasure) ||
+                        (d.measure && d.measure === selectedMeasure)
+                    );
+                }
+                if (selectedCountry) {
+                    filtered = filtered.filter(d => d["Reference area"] === selectedCountry);
+                }
+                if (selectedAge) {
+                    filtered = filtered.filter(d => d.Age === selectedAge);
+                }
+                if (selectedSex) {
+                    filtered = filtered.filter(d => d.Sex === selectedSex);
+                }
+                if (selectedYearRange) {
+                    const [startYear, endYear] = selectedYearRange.split('-').map(d => +d);
+                    filtered = filtered.filter(d => d.TIME_PERIOD >= startYear && d.TIME_PERIOD <= endYear);
+                }
+
+                return filtered;
+            }
+
+            function updateChart() {
+                const filteredData = getFilteredData();
+
+                if (filteredData.length === 0) {
+                    chart.selectAll("*").remove();
+                    legend.selectAll("*").remove();
+                    chart.append("text")
+                        .attr("x", chartWidth / 2)
+                        .attr("y", chartHeight / 2)
+                        .style("text-anchor", "middle")
+                        .style("font-size", "1.2rem")
+                        .style("fill", "#666")
+                        .text("No data available for the selected filters");
+                    return;
+                }
+
+                const yearlyData = d3.group(filteredData, d => d.TIME_PERIOD);
+                const years = Array.from(yearlyData.keys()).sort();
+
+                const countries = Array.from(new Set(filteredData.map(d => d["Reference area"]))).sort();
+                const colourScale = d3.scaleOrdinal(d3.schemeCategory10).domain(countries);
+
+                const stackedData = [];
+                years.forEach(year => {
+                    const yearData = yearlyData.get(year);
+                    const yearEntry = { year: year };
+                    let total = 0;
+
+                    countries.forEach(country => {
+                        const countryData = yearData.filter(d => d["Reference area"] === country);
+                        const countryTotal = d3.sum(countryData, d => d.OBS_VALUE);
+                        yearEntry[country] = countryTotal;
+                        total += countryTotal;
+                    });
+
+                    yearEntry.total = total;
+                    if (total > 0) {
+                        stackedData.push(yearEntry);
+                    }
+                });
+
+                if (stackedData.length === 0) {
+                    chart.selectAll("*").remove();
+                    legend.selectAll("*").remove();
+                    chart.append("text")
+                        .attr("x", chartWidth / 2)
+                        .attr("y", chartHeight / 2)
+                        .style("text-anchor", "middle")
+                        .style("font-size", "1.2rem")
+                        .style("fill", "#666")
+                        .text("No data available for the selected filters");
+                    return;
+                }
+
+                const stack = d3.stack()
+                    .keys(countries)
+                    .value((d, key) => d[key] || 0);
+
+                const stackedSeries = stack(stackedData);
+
+                const y = d3.scaleBand()
+                    .domain(years)
+                    .range([0, chartHeight])
+                    .padding(0.1);
+
+                const maxTotal = d3.max(stackedData, d => d.total);
+                const x = d3.scaleLinear()
+                    .domain([0, maxTotal])
+                    .nice()
+                    .range([0, chartWidth]);
+
+                chart.selectAll("*").remove();
+
+                const selectedMeasure = d3.select("#measure-select").property("value");
+                const selectedCountry = d3.select("#country-select").property("value");
+                const selectedAge = d3.select("#age-select").property("value");
+                const selectedSex = d3.select("#sex-select").property("value");
+                const selectedYearRange = d3.select("#year-select").property("value");
+
+                let titleParts = [];
+                if (selectedMeasure) {
+                    titleParts.push(selectedMeasure);
+                } else {
+                    titleParts.push("Data Visualisation");
+                }
+                if (selectedCountry) titleParts.push(selectedCountry);
+                if (selectedAge && selectedAge !== "Total") titleParts.push(selectedAge);
+                if (selectedSex && selectedSex !== "Total") titleParts.push(selectedSex);
+                if (selectedYearRange) titleParts.push(`(${selectedYearRange})`);
+
+                chart.append("text")
+                    .attr("class", "chart-title")
+                    .attr("x", chartWidth / 2)
+                    .attr("y", -20)
+                    .text(titleParts.join(" - "));
+
+                chart.append("g")
+                    .attr("class", "axis")
+                    .attr("transform", `translate(0,${chartHeight})`)
+                    .call(d3.axisBottom(x));
+
+                let xAxisLabel = "Value";
+                if (selectedMeasure) {
+                    if (selectedMeasure.toLowerCase().includes("fat")) {
+                        xAxisLabel = "Grammes per person per day";
+                    } else if (selectedMeasure.toLowerCase().includes("risk")) {
+                        xAxisLabel = "Risk Level";
+                    } else {
+                        xAxisLabel = "Measurement Value";
+                    }
+                }
+
+                chart.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", chartWidth / 2)
+                    .attr("y", chartHeight + 50)
+                    .style("text-anchor", "middle")
+                    .text(xAxisLabel);
+
+                chart.append("g")
+                    .attr("class", "axis")
+                    .call(d3.axisLeft(y).tickFormat(d3.format("d")));
+
+                chart.append("text")
+                    .attr("class", "axis-label")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", -chartHeight / 2)
+                    .attr("y", -30)
+                    .style("text-anchor", "middle")
+                    .text("Year");
+
+                const groups = chart.selectAll(".year-group")
+                    .data(stackedSeries)
+                    .enter()
+                    .append("g")
+                    .attr("class", "year-group")
+                    .attr("fill", d => colourScale(d.key));
+
+                groups.selectAll("rect")
+                    .data(d => d)
+                    .enter()
+                    .append("rect")
+                    .attr("class", "bar-segment")
+                    .attr("x", d => x(d[0]))
+                    .attr("y", d => y(d.data.year))
+                    .attr("width", d => x(d[1]) - x(d[0]))
+                    .attr("height", y.bandwidth())
+                    .on("mouseover", function (event, d) {
+                        const country = d3.select(this.parentNode).datum().key;
+                        const value = d.data[country] || 0;
+                        const year = d.data.year;
+                        const measure = selectedMeasure || "Value";
+
+                        tooltip.style("opacity", 1)
+                            .html(`<strong>${country}</strong><br/>Year: ${year}<br/>${measure}: ${value.toFixed(1)}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("opacity", 0);
+                    });
+
+                if (countries.length > 1) {
+                    legend.selectAll("*").remove();
+                    const legendItems = legend.selectAll(".legend-item")
+                        .data(countries)
+                        .enter()
+                        .append("div")
+                        .attr("class", "legend-item");
+
+                    legendItems.append("div")
+                        .attr("class", "legend-colour")
+                        .style("background-colour", d => colourScale(d));
+
+                    legendItems.append("span")
+                        .attr("class", "legend-text")
+                        .text(d => d);
+                } else {
+                    legend.selectAll("*").remove();
+                }
+            }
+
+            d3.selectAll("select").on("change", updateChart);
+
+            if (globalData.length > 0) {
+                const years = Array.from(new Set(globalData.map(d => d.TIME_PERIOD))).sort();
+                const firstRange = `${years[0]}-${years[Math.min(4, years.length - 1)]}`;
+                d3.select("#year-select").property("value", firstRange);
+                updateChart();
             }
         }
 
@@ -339,4 +529,4 @@ DATAFLOW,OECD.ELS.HD:DSD_HEALTH_LVNG@DF_HEALTH_LVNG(1.0),Risk factors for health
 
 </body>
 
-</html>
+</html>Ï

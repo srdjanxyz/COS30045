@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wealth and Wellbeing: Health risks in major economies</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+            padding: 20px;
+        }
+
+        header,
+        footer {
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            background-color: #ffffff;
+            color: #495057;
+            font-size: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        footer {
+            margin-top: 30px;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            color: #212529;
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            margin-bottom: 2.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 1.8rem 2.5rem;
+            max-width: 1200px;
+            background-color: #ffffff;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.6rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.95rem;
+            margin-bottom: 0.2rem;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background-color: white;
+            color: #343a40;
+            min-width: 200px;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236c757d'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 18px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        #chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        svg {
+            background-color: #fff;
+            margin-bottom: 1rem;
+            overflow: visible;
+        }
+
+        .bar-segment {
+            opacity: 0.9;
+            stroke: #ffffff;
+            stroke-width: 1;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .bar-segment:hover {
+            opacity: 1;
+            stroke-width: 1.5;
+            cursor: pointer;
+        }
+
+        .axis {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .axis path,
+        .axis line {
+            stroke: #adb5bd;
+            shape-rendering: crispEdges;
+        }
+
+        .axis-label {
+            font-size: 1rem;
+            font-weight: 600;
+            fill: #495057;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(33, 37, 41, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            pointer-events: none;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            fill: #343a40;
+            text-anchor: middle;
+        }
+
+        .loading,
+        .no-data {
+            font-size: 1.1rem;
+            color: #6c757d;
+            text-align: center;
+            padding: 3rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            margin-top: 1.5rem;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-colour {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px;
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+        }
+
+        .legend-text {
+            font-size: 0.9rem;
+            color: #343a40;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Wealth and Wellbeing: Health risks in major economies</h1>
+        <h3>Srdjan Evdic (100494687) & Cameron Schilling (104926045)</h3>
+    </header>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="measure-select">Measure:</label>
+            <select id="measure-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="country-select">Country:</label>
+            <select id="country-select">
+                <option value="">All Countries</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="age-select">Age:</label>
+            <select id="age-select">
+                <option value="">All Ages</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="sex-select">Sex:</label>
+            <select id="sex-select">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="year-select">Year Range:</label>
+            <select id="year-select">
+                <option value="">Loading data...</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="legend" class="legend"></div>
+
+    <div id="chart-container">
+        <div class="loading">Loading data...</div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const width = 1000;
+        const height = 700;
+        const margin = { top: 80, right: 150, bottom: 80, left: 200 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        let globalData = [];
+
+        async function loadData() {
+            try {
+                const data = await d3.csv("Top15GDP.csv");
+                data.forEach(d => {
+                    d.OBS_VALUE = +d.OBS_VALUE;
+                    d.TIME_PERIOD = +d.TIME_PERIOD;
+                });
+                globalData = data.filter(d => !isNaN(d.OBS_VALUE) && !isNaN(d.TIME_PERIOD));
+                populateFilters(globalData);
+                d3.select("#chart-container .loading").remove();
+                createChart();
+            } catch (error) {
+                console.error("Error loading data:", error);
+                d3.select("#chart-container").html('<div class="loading">Error loading data. Please ensure Top15GDP.csv is in the same directory.</div>');
+            }
+        }
+
+        function populateSelectWithDefault(selector, options, defaultText) {
+            const select = d3.select(selector);
+            select.selectAll("option").remove();
+            select.append("option")
+                .attr("value", "")
+                .text(defaultText);
+            select.selectAll("option.data-option")
+                .data(options)
+                .enter()
+                .append("option")
+                .attr("class", "data-option")
+                .attr("value", d => d)
+                .text(d => d);
+        }
+
+        function populateFilters(data) {
+            const measures = Array.from(new Set(data.map(d => d.Measure).filter(d => d && d.trim() !== ''))).sort();
+            const countries = Array.from(new Set(data.map(d => d["Reference area"]))).sort();
+            const ages = Array.from(new Set(data.map(d => d.Age).filter(d => d && d !== "Total"))).sort();
+            const sexes = Array.from(new Set(data.map(d => d.Sex).filter(d => d && d.trim() !== "" && d !== "Total"))).sort();
+            const years = Array.from(new Set(data.map(d => d.TIME_PERIOD))).sort();
+
+            const yearRanges = [];
+            for (let i = 0; i < years.length; i += 5) {
+                const startYear = years[i];
+                const endYear = years[Math.min(i + 4, years.length - 1)];
+                yearRanges.push({
+                    label: `${startYear}-${endYear}`,
+                    start: startYear,
+                    end: endYear
+                });
+            }
+
+            const measureSelect = d3.select("#measure-select");
+            measureSelect.selectAll("option").remove();
+            measureSelect.selectAll("option")
+                .data(measures)
+                .enter()
+                .append("option")
+                .attr("value", d => d)
+                .text(d => d);
+            if (measures.length > 0) {
+                measureSelect.property("value", measures[0]);
+            }
+
+            populateSelectWithDefault("#country-select", countries, "All Countries");
+            populateSelectWithDefault("#age-select", ages, "All Ages");
+            populateSelectWithDefault("#sex-select", sexes, "All");
+
+            const yearSelect = d3.select("#year-select");
+            yearSelect.selectAll("option").remove();
+            yearSelect.selectAll("option")
+                .data(yearRanges)
+                .enter()
+                .append("option")
+                .attr("value", d => `${d.start}-${d.end}`)
+                .text(d => d.label);
+        }
+
+        function createChart() {
+            const svg = d3.select("#chart-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const chart = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const tooltip = d3.select("#tooltip");
+            const legend = d3.select("#legend");
+
+            function getFilteredData() {
+                const selectedMeasure = d3.select("#measure-select").property("value");
+                const selectedCountry = d3.select("#country-select").property("value");
+                const selectedAge = d3.select("#age-select").property("value");
+                const selectedSex = d3.select("#sex-select").property("value");
+                const selectedYearRange = d3.select("#year-select").property("value");
+
+                let filtered = globalData;
+
+                if (selectedMeasure) {
+                    filtered = filtered.filter(d => d.Measure === selectedMeasure);
+                }
+                if (selectedCountry) {
+                    filtered = filtered.filter(d => d["Reference area"] === selectedCountry);
+                }
+                if (selectedAge) {
+                    filtered = filtered.filter(d => d.Age === selectedAge);
+                }
+                if (selectedSex) {
+                    filtered = filtered.filter(d => d.Sex === selectedSex);
+                }
+                if (selectedYearRange) {
+                    const [startYear, endYear] = selectedYearRange.split('-').map(d => +d);
+                    filtered = filtered.filter(d => d.TIME_PERIOD >= startYear && d.TIME_PERIOD <= endYear);
+                }
+
+                return filtered;
+            }
+
+            function updateChart() {
+                const filteredData = getFilteredData();
+
+                if (filteredData.length === 0) {
+                    chart.selectAll("*").remove();
+                    legend.selectAll("*").remove();
+                    chart.append("text")
+                        .attr("x", chartWidth / 2)
+                        .attr("y", chartHeight / 2)
+                        .style("text-anchor", "middle")
+                        .style("font-size", "1.2rem")
+                        .style("fill", "#666")
+                        .text("No data available for the selected filters");
+                    return;
+                }
+
+                const yearlyData = d3.group(filteredData, d => d.TIME_PERIOD);
+                const years = Array.from(yearlyData.keys()).sort();
+                const countries = Array.from(new Set(filteredData.map(d => d["Reference area"]))).sort();
+                const colourScale = d3.scaleOrdinal(d3.schemeCategory10).domain(countries);
+
+                const stackedData = [];
+                years.forEach(year => {
+                    const yearData = yearlyData.get(year);
+                    const yearEntry = { year: year };
+                    let total = 0;
+
+                    countries.forEach(country => {
+                        const countryData = yearData.filter(d => d["Reference area"] === country);
+                        const countryTotal = d3.sum(countryData, d => d.OBS_VALUE);
+                        yearEntry[country] = countryTotal;
+                        total += countryTotal;
+                    });
+
+                    yearEntry.total = total;
+                    if (total > 0) {
+                        stackedData.push(yearEntry);
+                    }
+                });
+
+                if (stackedData.length === 0) {
+                    chart.selectAll("*").remove();
+                    legend.selectAll("*").remove();
+                    chart.append("text")
+                        .attr("x", chartWidth / 2)
+                        .attr("y", chartHeight / 2)
+                        .style("text-anchor", "middle")
+                        .style("font-size", "1.2rem")
+                        .style("fill", "#666")
+                        .text("No data available for the selected filters");
+                    return;
+                }
+
+                const stack = d3.stack()
+                    .keys(countries)
+                    .value((d, key) => d[key] || 0);
+
+                const stackedSeries = stack(stackedData);
+
+                const y = d3.scaleBand()
+                    .domain(years)
+                    .range([0, chartHeight])
+                    .padding(0.1);
+
+                const maxTotal = d3.max(stackedData, d => d.total);
+                const x = d3.scaleLinear()
+                    .domain([0, maxTotal])
+                    .nice()
+                    .range([0, chartWidth]);
+
+                chart.selectAll("*").remove();
+
+                const selectedMeasure = d3.select("#measure-select").property("value");
+                const selectedCountry = d3.select("#country-select").property("value");
+                const selectedAge = d3.select("#age-select").property("value");
+                const selectedSex = d3.select("#sex-select").property("value");
+                const selectedYearRange = d3.select("#year-select").property("value");
+
+                let titleParts = [];
+                if (selectedMeasure) {
+                    titleParts.push(selectedMeasure);
+                } else {
+                    titleParts.push("Data Visualisation");
+                }
+                if (selectedCountry) titleParts.push(selectedCountry);
+                if (selectedAge && selectedAge !== "Total") titleParts.push(selectedAge);
+                if (selectedSex && selectedSex !== "Total") titleParts.push(selectedSex);
+                if (selectedYearRange) titleParts.push(`(${selectedYearRange})`);
+
+                chart.append("text")
+                    .attr("class", "chart-title")
+                    .attr("x", chartWidth / 2)
+                    .attr("y", -20)
+                    .text(titleParts.join(" - "));
+
+                chart.append("g")
+                    .attr("class", "axis")
+                    .attr("transform", `translate(0,${chartHeight})`)
+                    .call(d3.axisBottom(x));
+
+                let xAxisLabel = "Value";
+                const unitOfMeasure = filteredData.length > 0 ? filteredData[0]["UNIT_MEASURE"] : "";
+
+                if (selectedMeasure) {
+                    xAxisLabel = selectedMeasure;
+                    if (unitOfMeasure && unitOfMeasure !== "undefined") {
+                        xAxisLabel += ` (${unitOfMeasure})`;
+                    }
+                } else if (unitOfMeasure && unitOfMeasure !== "undefined") {
+                    xAxisLabel = `Value (${unitOfMeasure})`;
+                } else {
+                    xAxisLabel = "Measurement Value";
+                }
+
+                chart.append("text")
+                    .attr("class", "axis-label")
+                    .attr("x", chartWidth / 2)
+                    .attr("y", chartHeight + 50)
+                    .style("text-anchor", "middle")
+                    .text(xAxisLabel);
+
+                chart.append("g")
+                    .attr("class", "axis")
+                    .call(d3.axisLeft(y).tickFormat(d3.format("d")));
+
+                chart.append("text")
+                    .attr("class", "axis-label")
+                    .attr("transform", "rotate(-90)")
+                    .attr("x", -chartHeight / 2)
+                    .attr("y", -70)
+                    .style("text-anchor", "middle")
+                    .text("Year");
+
+                const groups = chart.selectAll(".year-group")
+                    .data(stackedSeries)
+                    .enter()
+                    .append("g")
+                    .attr("class", "year-group")
+                    .attr("fill", d => colourScale(d.key));
+
+                groups.selectAll("rect")
+                    .data(d => d)
+                    .enter()
+                    .append("rect")
+                    .attr("class", "bar-segment")
+                    .attr("x", d => x(d[0]))
+                    .attr("y", d => y(d.data.year))
+                    .attr("width", d => x(d[1]) - x(d[0]))
+                    .attr("height", y.bandwidth())
+                    .on("mouseover", function (event, d) {
+                        const country = d3.select(this.parentNode).datum().key;
+                        const value = d.data[country] || 0;
+                        const year = d.data.year;
+                        const measure = selectedMeasure || "Value";
+                        const displayUnit = filteredData.length > 0 ? filteredData[0]["UNIT_MEASURE"] || "" : "";
+                        const unitText = displayUnit && displayUnit !== "undefined" ? ` ${displayUnit}` : "";
+
+                        tooltip.style("opacity", 1)
+                            .html(`<strong>${country}</strong><br/>Year: ${year}<br/>${measure}: ${value.toFixed(1)}${unitText}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 10) + "px");
+                    })
+                    .on("mouseout", function () {
+                        tooltip.style("opacity", 0);
+                    });
+
+                if (countries.length > 1) {
+                    legend.selectAll("*").remove();
+                    const legendItems = legend.selectAll(".legend-item")
+                        .data(countries)
+                        .enter()
+                        .append("div")
+                        .attr("class", "legend-item");
+
+                    legendItems.append("div")
+                        .attr("class", "legend-colour")
+                        .style("background-color", d => colourScale(d));
+
+                    legendItems.append("span")
+                        .attr("class", "legend-text")
+                        .text(d => d);
+                } else {
+                    legend.selectAll("*").remove();
+                }
+            }
+
+            d3.selectAll("select").on("change", updateChart);
+
+            if (globalData.length > 0) {
+                const measures = Array.from(new Set(globalData.map(d => d.Measure).filter(d => d && d.trim() !== ''))).sort();
+                if (measures.length > 0) {
+                    d3.select("#measure-select").property("value", measures[0]);
+                }
+
+                const years = Array.from(new Set(globalData.map(d => d.TIME_PERIOD))).sort();
+                const endYearIndex = Math.min(4, years.length - 1);
+                const firstRange = `${years[0]}-${years[endYearIndex]}`;
+                d3.select("#year-select").property("value", firstRange);
+                updateChart();
+            }
+        }
+
+        loadData();
+    </script>
+
+    <footer>
+        <p>COS30045 Data Visualisation - Assignment 3C | <a
+                href="https://data-explorer.oecd.org/vis?lc=en&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_HEALTH_LVNG%40DF_HEALTH_LVNG&df[ag]=OECD.ELS.HD&dq=.A.....&pd=%2C&to[TIME_PERIOD]=false&vw=ov"
+                target="_blank" style="text-decoration: none;">Data Source</a> | <a
+                href="https://www.worldometers.info/gdp/gdp-by-country/"
+                target="_blank" style="text-decoration: none;">Worldometer GDP by Country</a></p>
+        Srdjan Evdic (100494687) & Cameron Schilling (104926045)
+    </footer>
+</body>
+
+</html>
